@@ -642,6 +642,7 @@
                         codeItem.appendChild(codeText);
                         codeList.appendChild(codeItem);
                         updateProgress();
+                        document.getElementById('copyAllButton').style.display = "block";
                     } catch (error) {
                         const errorItem = document.createElement('div');
                         errorItem.className = 'code-item';
@@ -654,7 +655,6 @@
 
             await Promise.all(tasks); // Чекаємо, поки всі завдання завершаться
             progressBar.classList.remove('show-progress'); // Видаляємо клас після завершення
-            document.getElementById('copyAllButton').style.display = "block";
             startButton.disabled = false; // Розблоковуємо кнопку
             startButton.textContent = 'Start Process';
         }
