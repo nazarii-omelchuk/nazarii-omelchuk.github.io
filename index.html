@@ -216,6 +216,7 @@
             width: 25%;
             height: 4px;
             background: var(--color-main-hover);
+            opacity: 0.5;
             border-radius: 18px;
             position: absolute;
             top: 0;
@@ -247,6 +248,11 @@
             color: var(--color-alternative-text);
             font-size: 14px;
             margin-top: 10px;
+            transition: background-color .5s, color .5s;
+        }
+        #progressLog {
+            color: var(--color-alternative-text);
+            font-size: 12px;
             transition: background-color .5s, color .5s;
         }
         .code-list {
@@ -436,6 +442,7 @@
                     <div id="progressBarFill" class="progress-bar-fill"></div>
                 </div>
                 <div id="progressPercentage" class="progress-percentage">0%</div>
+                <div id="progressLog"></div>
             </div>
             <div class="codes-container">
                 <div id="codeList" class="code-list">
@@ -452,7 +459,18 @@
         function updateCount() {
             document.getElementById('keyCount').value = document.getElementById('keyRange').value;
         }
-        
+        const EVENTS_DELAY = 20000;
+        let progress = 0;
+        let keyCount;
+
+        const updateProgress = (increment, message) => {
+            progress += increment;
+            if (progress > 100) progress = 100;
+            progressBarFill.style.width = `${progress}%`;
+            progressPercentage.textContent = `${Math.round(progress)}%`;
+            progressLog.innerText = message;
+        };
+
         const games = {
             1: {
                 name: 'Riding Extreme 3D',
@@ -476,6 +494,9 @@
             }
         };
 
+        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+        const delayRandom = () => Math.random() / 5 + 1;
+
         function generateClientId() {
             const timestamp = Date.now();
             const randomNumbers = Array.from({ length: 19 }, () => Math.floor(Math.random() * 10)).join('');
@@ -493,22 +514,23 @@
             const headers = {
                 'Content-Type': 'application/json; charset=utf-8',
             };
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: headers,
-                    body: JSON.stringify(data)
-                });
-                const result = await response.json();
-                return result.clientToken;
-            } catch (error) {
-                console.error('Помилка при вході клієнта:', error.message);
-                await new Promise(resolve => setTimeout(resolve, 4000));
-                return loginClient(); // Рекурсивний виклик
+            while (true) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(data)
+                    });
+                    const result = await response.json();
+                    return result.clientToken;
+                } catch (error) {
+                    console.error('Помилка при вході клієнта:', error.message);
+                    await new Promise(resolve => setTimeout(resolve, 4000));
+                }
             }
         }
 
-        async function registerEvent(token) {
+        async function registerEvent(token, keyCount) {
             const eventId = generateRandomUUID();
             const url = 'https://api.gamepromo.io/promo/register-event';
             const data = {
@@ -518,65 +540,74 @@
             };
             const headers = {
                 'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json; charset=utf-8',
+                'Content-Type': 'application/json'
             };
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: headers,
-                    body: JSON.stringify(data)
-                });
-                const result = await response.json();
-                if (!result.hasCode) {
+            while (true) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(data)
+                    });
+                    const result = await response.json();
+                    if (result.hasCode) {
+                        updateProgress(75 / (keyCount * 5), 'Emulating progress...');
+                        return true;
+                    }
                     console.log('Retry register event');
-                    await new Promise(resolve => setTimeout(resolve, 4000));
-                    return registerEvent(token); // Рекурсивний виклик
-                } else {
-                    return true;
+                    updateProgress(75 / (keyCount * 5), 'Emulating progress...');
+                    await sleep(EVENTS_DELAY * delayRandom());
+                } catch (error) {
+                    console.error('Помилка реєстрації події:', error.message);
+                    console.error('Тіло відповіді:', await error.response?.text());
+                    updateProgress(75 / (keyCount * 5), 'Emulating progress...');
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                 }
-            } catch (error) {
-                console.error('Помилка реєстрації події:', error.message);
-                console.error('Тіло відповіді:', await response.text());
-                await new Promise(resolve => setTimeout(resolve, 4000));
-                return registerEvent(token); // Рекурсивний виклик в разі помилки
             }
         }
 
         async function createCode(token) {
-            let response;
-            do {
+            const url = 'https://api.gamepromo.io/promo/create-code';
+            const data = {
+                promoId: games[args].promoId
+            };
+            const headers = {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json; charset=utf-8',
+            };
+            
+            while (true) {
                 try {
-                    const url = 'https://api.gamepromo.io/promo/create-code';
-                    const data = {
-                        promoId: games[args].promoId
-                    };
-                    const headers = {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json; charset=utf-8',
-                    };
-                    response = await fetch(url, {
+                    const response = await fetch(url, {
                         method: 'POST',
                         headers: headers,
                         body: JSON.stringify(data)
                     });
                     const result = await response.json();
                     if (result.promoCode) {
+                        updateProgress(20 / keyCount, 'Generating key...');
                         return result.promoCode;
                     }
                 } catch (error) {
                     console.error('Помилка при створенні коду:', error.message);
-                    console.error('Тіло відповіді:', await response.text());
+                    console.error('Тіло відповіді:', await error.response?.text());
+                    updateProgress(20 / keyCount, 'Generating key...');
                     await new Promise(resolve => setTimeout(resolve, 4000));
                 }
-            } while (!response || !response.promoCode); // Повторюємо запит, якщо нічого не знайдено
+            }
         }
 
         function generateRandomUUID() {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                const r = Math.random() * 16 | 0,
-                      v = c === 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
+            const chars = '0123456789abcdef';
+            const uuidTemplate = [8, 4, 4, 4, 12];
+            return uuidTemplate.map((len, idx) => {
+                return Array.from({ length: len }, (_, i) => {
+                    const r = Math.random() * 16 | 0;
+                    if (idx === 2 && i === 0) return '4'; // третя група починається з "4"
+                    if (idx === 3 && i === 0) return (r & 0x3 | 0x8).toString(16); // четверта група починається з "8", "9", "A", "B"
+                    return chars[r];
+                }).join('');
+            }).join('-');
         }
 
         function copyToClipboard(text, element) {
@@ -591,74 +622,60 @@
         }
 
         async function startProcess() {
-            document.getElementById('progressContainer').style.display = "block";
-            document.getElementById('copyAllButton').style.display = "none";
             const startButton = document.getElementById('startButton');
-            startButton.disabled = true; // Блокуємо кнопку
-            startButton.textContent = 'Processing...';
-
             const progressBar = document.getElementById('progressBar');
-            progressBar.classList.add('show-progress'); // Додаємо клас для показу псевдоелемента
-
             const progressBarFill = document.getElementById('progressBarFill');
             const progressPercentage = document.getElementById('progressPercentage');
             const codeList = document.getElementById('codeList');
             const gameSelect = document.getElementById('gameSelect');
             const keyCountInput = document.getElementById('keyCount');
             const selectedGame = parseInt(gameSelect.value);
-            const keyCount = parseInt(keyCountInput.value);
+            keyCount = parseInt(keyCountInput.value);
+            progress = 0;
 
-            let progress = 0;
-            const progressStep = 100 / keyCount;
-
+            startButton.disabled = true; // Блокуємо кнопку
+            startButton.textContent = 'Processing...';
+            document.getElementById('progressContainer').style.display = "block";
+            document.getElementById('copyAllButton').style.display = "none";
+            progressBar.classList.add('show-progress'); // Додаємо клас для показу псевдоелемента
             progressBarFill.style.width = `${progress}%`;
             progressPercentage.textContent = `${Math.round(progress)}%`;
-
-            function updateProgress() {
-                progress += progressStep;
-                progressBarFill.style.width = `${progress}%`;
-                progressPercentage.textContent = `${Math.round(progress)}%`;
-            }
-
+            codeList.innerHTML = ""; // Очищення списку кодів перед початком процесу
             args = selectedGame;
 
-            codeList.innerHTML = ""; // Очищення списку кодів перед початком процесу
+            const generateKeyProcess = async () => {
+                try {
+                    const token = await loginClient();
+                    updateProgress(progress, 'Starting...');
+                    await sleep(EVENTS_DELAY * delayRandom());
+                    await registerEvent(token, keyCount);
+                    const codeData = await createCode(token);
 
-            // Запускаємо паралельно декілька потоків
-            const tasks = [];
-            for (let i = 0; i < keyCount; i++) {
-                tasks.push((async (index) => {
-                    try {
-                        const token = await loginClient();
-                        await registerEvent(token);
-                        const codeData = await createCode(token);
-                        // Виводимо код в список
-                        const codeItem = document.createElement('div');
-                        codeItem.className = 'code-item';
-                        const codeText = document.createElement('code');
-                        codeText.className = 'code-text';
-                        codeText.textContent = `${codeData}`;
-                        codeText.onclick = () => copyToClipboard(codeData, codeText);
-                        codeItem.appendChild(codeText);
-                        codeList.appendChild(codeItem);
-                        updateProgress();
-                        document.getElementById('copyAllButton').style.display = "block";
-                    } catch (error) {
-                        const errorItem = document.createElement('div');
-                        errorItem.className = 'code-item';
-                        errorItem.textContent = `Process ${index + 1} - Error: ${error.message}`;
-                        codeList.appendChild(errorItem);
-                        updateProgress();
-                    }
-                })(i));
-            }
+                    const codeItem = document.createElement('div');
+                    codeItem.className = 'code-item';
+                    const codeText = document.createElement('code');
+                    codeText.className = 'code-text';
+                    codeText.textContent = codeData;
+                    codeText.onclick = () => copyToClipboard(codeData, codeText);
+                    codeItem.appendChild(codeText);
+                    codeList.appendChild(codeItem);
+                    document.getElementById('copyAllButton').style.display = "block";
+                } catch (error) {
+                    const errorItem = document.createElement('div');
+                    errorItem.className = 'code-item';
+                    errorItem.textContent = `Process ${i + 1} - Error: ${error.message}`;
+                    codeList.appendChild(errorItem);
+                }
+            };
 
-            await Promise.all(tasks); // Чекаємо, поки всі завдання завершаться
+            const keys = await Promise.all(Array.from({ length: keyCount }, generateKeyProcess));
+            updateProgress(100, 'Completed');
             progressBar.classList.remove('show-progress'); // Видаляємо клас після завершення
             startButton.disabled = false; // Розблоковуємо кнопку
             startButton.textContent = 'Start Process';
         }
-        document.getElementById('copyAllButton').addEventListener('click', function() {
+
+        document.getElementById('copyAllButton').addEventListener('click', () => {
             const codes = Array.from(document.querySelectorAll('.code-text')).map(el => el.textContent).join('\n');
             if (codes) {
                 navigator.clipboard.writeText(codes).then(() => {
@@ -673,22 +690,18 @@
             }
         });
 
-
         document.addEventListener('DOMContentLoaded', () => {
             const toggleSwitch = document.getElementById('theme-switch');
             const currentTheme = localStorage.getItem('theme') || 'dark';
             
-            if (currentTheme) {
-                if (currentTheme === 'light') {
-                    toggleSwitch.checked = true;
-                }
-            }
-            toggleSwitch.addEventListener('change', () => {
-                const theme = localStorage.getItem('theme');
-                document.documentElement.setAttribute('data-theme', theme === 'light' ? 'dark' : 'light');
-                localStorage.setItem('theme', theme === 'light' ? 'dark' : 'light');
-            });
+            toggleSwitch.checked = currentTheme === 'light';
             document.documentElement.setAttribute('data-theme', currentTheme);
+
+            toggleSwitch.addEventListener('change', () => {
+                const newTheme = toggleSwitch.checked ? 'light' : 'dark';
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+            });
         });
     </script>
 </body>
