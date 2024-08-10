@@ -647,6 +647,7 @@
                         errorItem.className = 'code-item';
                         errorItem.textContent = `Process ${index + 1} - Error: ${error.message}`;
                         codeList.appendChild(errorItem);
+                        updateProgress();
                     }
                 })(i));
             }
