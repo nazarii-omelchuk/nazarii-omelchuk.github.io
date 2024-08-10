@@ -503,7 +503,7 @@
                 return result.clientToken;
             } catch (error) {
                 console.error('Помилка при вході клієнта:', error.message);
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise(resolve => setTimeout(resolve, 4000));
                 return loginClient(); // Рекурсивний виклик
             }
         }
@@ -529,7 +529,7 @@
                 const result = await response.json();
                 if (!result.hasCode) {
                     console.log('Retry register event');
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await new Promise(resolve => setTimeout(resolve, 4000));
                     return registerEvent(token); // Рекурсивний виклик
                 } else {
                     return true;
@@ -537,7 +537,7 @@
             } catch (error) {
                 console.error('Помилка реєстрації події:', error.message);
                 console.error('Тіло відповіді:', await response.text());
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise(resolve => setTimeout(resolve, 4000));
                 return registerEvent(token); // Рекурсивний виклик в разі помилки
             }
         }
@@ -566,7 +566,7 @@
                 } catch (error) {
                     console.error('Помилка при створенні коду:', error.message);
                     console.error('Тіло відповіді:', await response.text());
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await new Promise(resolve => setTimeout(resolve, 4000));
                 }
             } while (!response || !response.promoCode); // Повторюємо запит, якщо нічого не знайдено
         }
