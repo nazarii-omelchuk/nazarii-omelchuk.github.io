@@ -421,6 +421,7 @@
                             <option value="3">My Clone Army</option>
                             <option value="4">Train Miner</option>
                             <option value="5">Merge Away</option>
+                            <option value="6">Twerk Race 3D</option>
                         </select>
                     <label>Select Number of Keys to Generate:</label>
                     <input type="number" id="keyCount" min="1" max="24" value="1" oninput="updateRange()">
@@ -497,8 +498,12 @@
                 name: 'Merge Away',
                 appToken: '8d1cc2ad-e097-4b86-90ef-7a27e19fb833',
                 promoId: 'dc128d28-c45b-411c-98ff-ac7726fbaea4',
-            }
-        };
+            },
+            6: {
+                name: 'Twerk Race 3D',
+                appToken: '61308365-9d16-4040-8bb0-2f4a4c69074c',
+                promoId: '61308365-9d16-4040-8bb0-2f4a4c69074c',
+            };
 
         const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
         const delayRandom = () => Math.random() / 5 + 1;
