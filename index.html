@@ -563,16 +563,16 @@
                     });
                     const result = await response.json();
                     if (result.hasCode) {
-                        updateProgress(75 / (keyCount * 5), 'Emulating progress...');
+                        updateProgress(75 / (keyCount * 7), 'Emulating progress...');
                         return true;
                     }
                     console.log('Retry register event');
-                    updateProgress(75 / (keyCount * 5), 'Emulating progress...');
+                    updateProgress(75 / (keyCount * 7), 'Emulating progress...');
                     await sleep(EVENTS_DELAY * delayRandom());
                 } catch (error) {
                     console.error('Помилка реєстрації події:', error.message);
                     console.error('Тіло відповіді:', await error.response?.text());
-                    updateProgress(75 / (keyCount * 5), 'Emulating progress...');
+                    updateProgress(75 / (keyCount * 7), 'Emulating progress...');
                     await new Promise(resolve => setTimeout(resolve, 2000));
                 }
             }
